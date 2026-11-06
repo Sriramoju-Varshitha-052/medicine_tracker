@@ -100,5 +100,98 @@ router.post("/place", authMiddleware, async (req, res) => {
         });
     }
 });
+// 3. Medical Shop Owner - View Customer Orders
+router.get("/shop-orders", authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== "medicalShop") {
+            return res.status(403).json({
+                message: "Only medical shop owners can view orders"
+            });
+        }
 
+        const orders = await Order.find({
+            medicalShop: req.user.id
+        })
+        .populate("user", "name email phone")
+        .populate("medicine", "name price");
+
+        res.status(200).json({
+            count: orders.length,
+            orders
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error fetching shop orders",
+            error: error.message
+        });
+    }
+});
+// 4. Medical Shop Owner - Update Order Status
+router.put("/update-status/:id", authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== "medicalShop") {
+            return res.status(403).json({
+                message: "Only medical shop owners can update orders"
+            });
+        }
+
+        const { status } = req.body;
+
+        const allowedStatuses = ["confirmed", "rejected", "completed"];
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                message: "Invalid order status"
+            });
+        }
+
+        const order = await Order.findOne({
+            _id: req.params.id,
+            medicalShop: req.user.id
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                message: "Order not found in your shop"
+            });
+        }
+
+        if (
+            (status === "confirmed" || status === "rejected") &&
+            order.status !== "pending"
+        ) {
+            return res.status(400).json({
+                message: "Only pending orders can be confirmed or rejected"
+            });
+        }
+
+        if (status === "completed" && order.status !== "confirmed") {
+            return res.status(400).json({
+                message: "Only confirmed orders can be completed"
+            });
+        }
+
+        if (status === "rejected") {
+            await Medicine.findByIdAndUpdate(
+                order.medicine,
+                { $inc: { quantity: order.quantity } }
+            );
+        }
+
+        order.status = status;
+        await order.save();
+
+        res.status(200).json({
+            message: "Order status updated successfully",
+            order
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error updating order status",
+            error: error.message
+        });
+    }
+});
 module.exports = router;

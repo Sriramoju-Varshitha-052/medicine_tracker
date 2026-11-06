@@ -1,8 +1,12 @@
+
 const jwt = require("jsonwebtoken");
 const express = require("express");
 const router = express.Router();
 
 const MedicalShop = require("../models/MedicalShop");
+const Medicine = require("../models/Medicine");
+const Order = require("../models/Order");
+
 const authMiddleware = require("../middleware/authMiddleware");
 
 // Admin authorization
@@ -15,7 +19,8 @@ const adminOnly = (req, res, next) => {
 
     next();
 };
-// Admin Login
+
+// 1. Admin Login
 router.post("/login", async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -47,7 +52,8 @@ router.post("/login", async (req, res) => {
         });
     }
 });
-// 1. View all registered medical shops
+
+// 2. View All Registered Medical Shops
 router.get("/shops", authMiddleware, adminOnly, async (req, res) => {
     try {
         const shops = await MedicalShop.find().select("-password");
@@ -56,6 +62,7 @@ router.get("/shops", authMiddleware, adminOnly, async (req, res) => {
             count: shops.length,
             shops
         });
+
     } catch (error) {
         res.status(500).json({
             message: "Error fetching medical shops",
@@ -64,7 +71,7 @@ router.get("/shops", authMiddleware, adminOnly, async (req, res) => {
     }
 });
 
-// 2. Approve a medical shop
+// 3. Approve Medical Shop
 router.put("/shops/approve/:id", authMiddleware, adminOnly, async (req, res) => {
     try {
         const shop = await MedicalShop.findByIdAndUpdate(
@@ -83,6 +90,7 @@ router.put("/shops/approve/:id", authMiddleware, adminOnly, async (req, res) => 
             message: "Medical shop approved successfully",
             shop
         });
+
     } catch (error) {
         res.status(500).json({
             message: "Error approving medical shop",
@@ -91,7 +99,7 @@ router.put("/shops/approve/:id", authMiddleware, adminOnly, async (req, res) => 
     }
 });
 
-// 3. Reject a medical shop
+// 4. Reject Medical Shop
 router.put("/shops/reject/:id", authMiddleware, adminOnly, async (req, res) => {
     try {
         const shop = await MedicalShop.findByIdAndUpdate(
@@ -110,9 +118,50 @@ router.put("/shops/reject/:id", authMiddleware, adminOnly, async (req, res) => {
             message: "Medical shop rejected successfully",
             shop
         });
+
     } catch (error) {
         res.status(500).json({
             message: "Error rejecting medical shop",
+            error: error.message
+        });
+    }
+});
+
+// 5. Admin - View All Medicines
+router.get("/medicines", authMiddleware, adminOnly, async (req, res) => {
+    try {
+        const medicines = await Medicine.find()
+            .populate("medicalShop", "shopName");
+
+        res.status(200).json({
+            count: medicines.length,
+            medicines
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error fetching medicines",
+            error: error.message
+        });
+    }
+});
+
+// 6. Admin - View All Orders
+router.get("/orders", authMiddleware, adminOnly, async (req, res) => {
+    try {
+        const orders = await Order.find()
+            .populate("user", "name email")
+            .populate("medicalShop", "shopName")
+            .populate("medicine", "name price");
+
+        res.status(200).json({
+            count: orders.length,
+            orders
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error fetching orders",
             error: error.message
         });
     }

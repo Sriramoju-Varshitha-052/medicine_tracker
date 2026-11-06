@@ -7,7 +7,10 @@ const jwt = require("jsonwebtoken");
 
 const User = require("../models/User");
 
+// ========================================
 // USER REGISTRATION
+// ========================================
+
 router.post("/register", async (req, res) => {
     try {
         const { name, email, password, phone, address } = req.body;
@@ -47,7 +50,10 @@ router.post("/register", async (req, res) => {
 });
 
 
+// ========================================
 // USER LOGIN
+// ========================================
+
 router.post("/login", async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -97,7 +103,43 @@ router.post("/login", async (req, res) => {
         });
     }
 });
+
+
+// ========================================
+// VIEW USER PROFILE
+// ========================================
+
+router.get("/profile", authMiddleware, async (req, res) => {
+    try {
+
+        const user = await User.findById(req.user.id)
+            .select("-password");
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Profile fetched successfully",
+            user
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: error.message
+        });
+
+    }
+});
+
+
+// ========================================
 // UPDATE USER PROFILE
+// ========================================
+
 router.put("/update-profile", authMiddleware, async (req, res) => {
     try {
         const { name, phone, address } = req.body;
@@ -128,9 +170,17 @@ router.put("/update-profile", authMiddleware, async (req, res) => {
         });
 
     } catch (error) {
+
         res.status(500).json({
             message: error.message
         });
+
     }
 });
+
+
+// ========================================
+// EXPORT ROUTER
+// ========================================
+
 module.exports = router;
